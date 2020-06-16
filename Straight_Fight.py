@@ -1,22 +1,3 @@
-"""
-It seems that the Warrior, Knight, Defender and Vampire are not enough
-to win the battle. Let's add one more powerful unit type - the Lancer.
-Lancer should be the subclass of the Warrior class and should attack in
-a specific way - when he hits the other unit, he also deals a 50% of
-the deal damage to the enemy unit, standing behind the firstly assaulted
-one (enemy defense makes the deal damage value lower - consider this).
-The basic parameters of the Lancer:
-health = 50
-attack = 6
-
-Input: The warriors and armies.
-
-Output: The result of the battle (True or False).
-
-Precondition: 5 types of units.
-"""
-
-
 class Warrior:
     def __init__(self):
         self.attack = 5
@@ -60,6 +41,19 @@ class Lancer(Warrior):
         self.punching_attack = 50
 
 
+class Healer(Warrior):
+    def __init__(self):
+        super().__init__()
+        self.attack = 0
+        self.health = 60
+
+    @staticmethod
+    def heal(unit):
+        max_class_health = unit.__class__().health
+        if unit.health < max_class_health:
+            unit.health += 1 if max_class_health - unit.health == 1 else 2
+
+
 class Army:
     def __init__(self):
         self.units_list = []
@@ -85,6 +79,11 @@ class Battle:
                 attacking_unit.health += \
                     damage * attacking_unit.vampirism / 100
 
+                if len(attacking_army.units_list) > 1:
+                    behind_attacking_unit = attacking_army.units_list[1]
+                    if behind_attacking_unit.__class__.__name__ == "Healer":
+                        Healer.heal(attacking_unit)
+
                 if len(defending_army.units_list) > 1:
                     behind_defending_unit = defending_army.units_list[1]
                     damage = (damage * attacking_unit.punching_attack / 100
@@ -100,6 +99,19 @@ class Battle:
                     attacking_army, defending_army = \
                         defending_army, attacking_army
 
+        return army_1.units != []
+
+    @staticmethod
+    def straight_fight(army_1, army_2):
+        while army_1.units != [] and army_2.units != []:
+            for i in range(min(len(army_1.units), len(army_2.units))):
+                if fight(army_1.units[i], army_2.units[i]):
+                    army_2.units[i] = "dead_body"
+                else:
+                    army_1.units[i] = "dead_body"
+            for some_army in [army_1, army_2]:
+                while some_army.units_list.count("dead_body") > 0:
+                    some_army.units_list.remove("dead_body")
         return army_1.units != []
 
 
@@ -118,8 +130,7 @@ def fight(unit_1, unit_2):
 
 
 if __name__ == '__main__':
-    # These "asserts" using only for self-checking and not necessary
-    # for auto-testing
+    # These "asserts" using only for self-checking and not necessary for auto-testing
 
     # fight tests
     chuck = Warrior()
@@ -137,47 +148,65 @@ if __name__ == '__main__':
     ogre = Warrior()
     freelancer = Lancer()
     vampire = Vampire()
+    priest = Healer()
 
-    assert fight(chuck, bruce) is True
-    assert fight(dave, carl) is False
-    assert chuck.is_alive is True
-    assert bruce.is_alive is False
-    assert carl.is_alive is True
-    assert dave.is_alive is False
-    assert fight(carl, mark) is False
-    assert carl.is_alive is False
-    assert fight(bob, mike) is False
-    assert fight(lancelot, rog) is True
-    assert fight(eric, richard) is False
-    assert fight(ogre, adam) is True
-    assert fight(freelancer, vampire) is True
-    assert freelancer.is_alive is True
+    assert fight(chuck, bruce) == True
+    assert fight(dave, carl) == False
+    assert chuck.is_alive == True
+    assert bruce.is_alive == False
+    assert carl.is_alive == True
+    assert dave.is_alive == False
+    assert fight(carl, mark) == False
+    assert carl.is_alive == False
+    assert fight(bob, mike) == False
+    assert fight(lancelot, rog) == True
+    assert fight(eric, richard) == False
+    assert fight(ogre, adam) == True
+    assert fight(freelancer, vampire) == True
+    assert freelancer.is_alive == True
+    assert freelancer.health == 14
+    priest.heal(freelancer)
+    assert freelancer.health == 16
 
     # battle tests
     my_army = Army()
     my_army.add_units(Defender, 2)
+    my_army.add_units(Healer, 1)
     my_army.add_units(Vampire, 2)
-    my_army.add_units(Lancer, 4)
+    my_army.add_units(Lancer, 2)
+    my_army.add_units(Healer, 1)
     my_army.add_units(Warrior, 1)
 
     enemy_army = Army()
     enemy_army.add_units(Warrior, 2)
-    enemy_army.add_units(Lancer, 2)
+    enemy_army.add_units(Lancer, 4)
+    enemy_army.add_units(Healer, 1)
     enemy_army.add_units(Defender, 2)
     enemy_army.add_units(Vampire, 3)
+    enemy_army.add_units(Healer, 1)
 
     army_3 = Army()
     army_3.add_units(Warrior, 1)
     army_3.add_units(Lancer, 1)
+    army_3.add_units(Healer, 1)
     army_3.add_units(Defender, 2)
 
     army_4 = Army()
     army_4.add_units(Vampire, 3)
     army_4.add_units(Warrior, 1)
+    army_4.add_units(Healer, 1)
     army_4.add_units(Lancer, 2)
+
+    army_5 = Army()
+    army_5.add_units(Warrior, 10)
+
+    army_6 = Army()
+    army_6.add_units(Warrior, 6)
+    army_6.add_units(Lancer, 5)
 
     battle = Battle()
 
-    assert battle.fight(my_army, enemy_army) is True
-    assert battle.fight(army_3, army_4) is False
+    assert battle.fight(my_army, enemy_army) == False
+    assert battle.fight(army_3, army_4) == True
+    assert battle.straight_fight(army_5, army_6) == False
     print("Coding complete? Let's try tests!")

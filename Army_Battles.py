@@ -54,19 +54,19 @@ class Army:
 class Battle:
     @staticmethod
     def fight(army_1, army_2):
-        while army_1.units_list != [] and army_2.units_list != []:
-            attacking, defending = army_1.units_list[0], army_2.units_list[0]
+        while army_1.units != [] and army_2.units != []:
+            attacking, defending = army_1.units[0], army_2.units[0]
             while True:
                 defending.health -= attacking.attack
                 if defending.health <= 0:
                     break
                 else:
                     attacking, defending = defending, attacking
-            if army_1.units_list[0].is_alive:
-                army_2.units_list.pop(0)
+            if army_1.units[0].is_alive:
+                army_2.units.pop(0)
             else:
-                army_1.units_list.pop(0)
-        return army_1.units_list != []
+                army_1.units.pop(0)
+        return army_1.units != []
 
 
 def fight(unit_1, unit_2):
