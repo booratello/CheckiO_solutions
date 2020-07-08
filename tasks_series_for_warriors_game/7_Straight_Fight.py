@@ -1,11 +1,32 @@
-from math import floor
+"""
+A new unit type won’t be added in this mission, but instead we’ll add a new
+tactic - straight_fight(army_1, army_2). It should be the method of the Battle
+class and it should work as follows:
+at the beginning there will be a few duels between each pair of soldiers from
+both armies (the first unit against the first, the second against the second
+and so on). After that all dead soldiers will be removed and the process
+repeats until all soldiers of one of the armies will be dead. Armies might not
+have the same number of soldiers. If a warrior doesn’t have an opponent from
+the enemy army - we’ll automatically assume that he’s won a duel
+(for example - 9th and 10th units from the first army, if the second has only
+8 soldiers).
 
+Input: The warriors and armies.
+
+Output: The result of the battle (True or False).
+
+How it is used: For computer games development.
+
+Precondition: 5 types of units, 2 types of battles
+"""
 
 class Warrior:
     def __init__(self):
         self.attack = 5
         self.health = 50
         self.defense = 0
+        self.vampirism = 0
+        self.punching_attack = 0
 
     @property
     def is_alive(self):
@@ -33,23 +54,13 @@ class Vampire(Warrior):
         self.health = 40
         self.vampirism = 50
 
-    def vamp_heal(self, damage):
-        hurt = self.__class__().health - self.health
-        if hurt > 0:
-            vamp_hp = floor(damage * self.vampirism / 100)
-            self.health += vamp_hp if hurt > vamp_hp else hurt
-
 
 class Lancer(Warrior):
     def __init__(self):
         super().__init__()
         self.attack = 6
         self.health = 50
-        self.puncture = 50
-
-    def puncturing_attack(self, damage, second_defending):
-        second_defending.health -= \
-            damage * self.puncture / 100 - second_defending.defense
+        self.punching_attack = 50
 
 
 class Healer(Warrior):
@@ -57,21 +68,21 @@ class Healer(Warrior):
         super().__init__()
         self.attack = 0
         self.health = 60
-        self.heal_power = 2
 
-    def heal(self, unit):
-        hurt = unit.__class__().health - unit.health
-        if hurt > 0:
-            unit.health += self.heal_power if hurt > self.heal_power else hurt
+    @staticmethod
+    def heal(unit):
+        max_class_health = unit.__class__().health
+        if unit.health < max_class_health:
+            unit.health += 1 if max_class_health - unit.health == 1 else 2
 
 
 class Army:
     def __init__(self):
-        self.units = []
+        self.units_list = []
 
     def add_units(self, what_unit, how_many):
         while how_many != 0:
-            self.units.append(what_unit())
+            self.units_list.append(what_unit())
             how_many -= 1
 
 
@@ -83,32 +94,46 @@ class Battle:
 
             while True:
                 attacking_unit, defending_unit = \
-                    attacking_army.units[0], defending_army.units[0]
+                    attacking_army.units_list[0], defending_army.units_list[0]
                 damage = attacking_unit.attack - defending_unit.defense if \
                     attacking_unit.attack > defending_unit.defense else 0
                 defending_unit.health -= damage
+                attacking_unit.health += \
+                    damage * attacking_unit.vampirism / 100
 
-                if attacking_unit.__class__.__name__ == "Vampire":
-                    attacking_unit.vamp_heal(damage)
+                if len(attacking_army.units_list) > 1:
+                    behind_attacking_unit = attacking_army.units_list[1]
+                    if behind_attacking_unit.__class__.__name__ == "Healer":
+                        Healer.heal(attacking_unit)
 
-                if attacking_unit.__class__.__name__ == "Lancer" and \
-                        len(defending_army.units) > 1 and damage > 0:
-                    attacking_unit.puncturing_attack(damage,
-                                                     defending_army.units[1])
-                    if not defending_army.units[1].is_alive:
-                        defending_army.units.pop(1)
-
-                if len(attacking_army.units) > 1 and \
-                        attacking_army.units[1].__class__.__name__ == "Healer":
-                    attacking_army.units[1].heal(attacking_unit)
+                if len(defending_army.units_list) > 1:
+                    behind_defending_unit = defending_army.units_list[1]
+                    damage = (damage * attacking_unit.punching_attack / 100
+                              - behind_defending_unit.defense)
+                    behind_defending_unit.health -= damage if damage > 0 else 0
+                    if not behind_defending_unit.is_alive:
+                        defending_army.units_list.pop(1)
 
                 if not defending_unit.is_alive:
-                    defending_army.units.pop(0)
+                    defending_army.units_list.pop(0)
                     break
                 else:
                     attacking_army, defending_army = \
                         defending_army, attacking_army
 
+        return army_1.units != []
+
+    @staticmethod
+    def straight_fight(army_1, army_2):
+        while army_1.units != [] and army_2.units != []:
+            for i in range(min(len(army_1.units), len(army_2.units))):
+                if fight(army_1.units[i], army_2.units[i]):
+                    army_2.units[i] = "dead_body"
+                else:
+                    army_1.units[i] = "dead_body"
+            for some_army in [army_1, army_2]:
+                while some_army.units_list.count("dead_body") > 0:
+                    some_army.units_list.remove("dead_body")
         return army_1.units != []
 
 
@@ -118,8 +143,7 @@ def fight(unit_1, unit_2):
         damage = attacking.attack - defending.defense if \
             attacking.attack > defending.defense else 0
         defending.health -= damage
-        if attacking.__class__.__name__ == "Vampire":
-            attacking.vamp_heal(damage)
+        attacking.health += damage * attacking.vampirism / 100
         if defending.health <= 0:
             break
         else:
@@ -195,8 +219,16 @@ if __name__ == '__main__':
     army_4.add_units(Healer, 1)
     army_4.add_units(Lancer, 2)
 
+    army_5 = Army()
+    army_5.add_units(Warrior, 10)
+
+    army_6 = Army()
+    army_6.add_units(Warrior, 6)
+    army_6.add_units(Lancer, 5)
+
     battle = Battle()
 
     assert battle.fight(my_army, enemy_army) == False
     assert battle.fight(army_3, army_4) == True
+    assert battle.straight_fight(army_5, army_6) == False
     print("Coding complete? Let's try tests!")
